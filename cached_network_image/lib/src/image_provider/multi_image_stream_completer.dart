@@ -10,6 +10,8 @@ double get timeDilation => _timeDilation;
 double _timeDilation = 1;
 
 /// An ImageStreamCompleter with support for loading multiple images.
+///
+/// SoftWyer changes to disable image animations after 20 seconds
 class MultiImageStreamCompleter extends ImageStreamCompleter {
   /// The constructor to create an MultiImageStreamCompleter. The [codec]
   /// should be a stream with the images that should be shown. The
@@ -55,6 +57,8 @@ class MultiImageStreamCompleter extends ImageStreamCompleter {
       );
     }
   }
+
+  final _repeatTimer = Timer(const Duration(seconds: 20), () {});
 
   ui.Codec? _codec;
   ui.Codec? _nextImageCodec;
@@ -109,8 +113,7 @@ class MultiImageStreamCompleter extends ImageStreamCompleter {
         _switchToNewCodec();
       } else {
         final completedCycles = _framesEmitted ~/ _codec!.frameCount;
-        if (_codec!.repetitionCount == -1 ||
-            completedCycles <= _codec!.repetitionCount) {
+        if (_codec!.repetitionCount == -1 || completedCycles <= _codec!.repetitionCount) {
           _decodeNextFrameAndSchedule();
         }
       }
@@ -154,7 +157,9 @@ class MultiImageStreamCompleter extends ImageStreamCompleter {
       _emitFrame(ImageInfo(image: _nextFrame!.image, scale: _scale));
       return;
     }
-    _scheduleAppFrame();
+    if (_repeatTimer.isActive) {
+      _scheduleAppFrame();
+    }
   }
 
   void _scheduleAppFrame() {
@@ -196,12 +201,11 @@ class MultiImageStreamCompleter extends ImageStreamCompleter {
   }
 
   void __maybeDispose() {
-    if (!__hadAtLeastOneListener ||
-        __disposed ||
-        hasListeners ||
-        __keepAliveHandles != 0) {
+    if (!__hadAtLeastOneListener || __disposed || hasListeners || __keepAliveHandles != 0) {
       return;
     }
+
+    _repeatTimer.cancel();
 
     __disposed = true;
 
